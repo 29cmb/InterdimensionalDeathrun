@@ -58,8 +58,8 @@ public class PlayerController : MonoBehaviour
         else
         {
             useJoystick = false;
-            Destroy(joystick)
-            Destroy(JumpBtn)
+            Destroy(joystick);
+            Destroy(JumpBtn);
         }
         // Movement controls
         if (useJoystick == false && (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) || (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)))
@@ -110,7 +110,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    void MobileJump()
+    public void MobileJump()
     {
         if (isGrounded)
         {
