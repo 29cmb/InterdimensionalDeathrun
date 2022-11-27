@@ -19,7 +19,7 @@ public class ButtonHandler : MonoBehaviour
     public void restartLevel()
     {
         var currentScene = SceneManager.GetActiveScene().name;
-        if (currentScene.Contains("Flipped"))
+        if (currentScene.Contains("Flipped") || currentScene.Contains("Glitched"))
         {
             SceneManager.LoadScene(currentScene.Substring(0, 6));
         }
