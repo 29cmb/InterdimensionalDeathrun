@@ -9,9 +9,6 @@ EditorBuildSettings:
     path: Assets/Scenes/MainMenu.unity
     guid: 7a311e4c46d15174280365220e66cedc
   - enabled: 1
-    path: Assets/Scenes/LoginMenu.unity
-    guid: 034a5b5abbf07d94d98bd8c010dc3239
-  - enabled: 1
     path: Assets/Scenes/FullCreditsMenu.unity
     guid: 7c363bff846a2034f93a2ce2e0e9de93
   - enabled: 1
@@ -21,21 +18,15 @@ EditorBuildSettings:
     path: Assets/Scenes/Level1.unity
     guid: 2cda990e2423bbf4892e6590ba056729
   - enabled: 1
-    path: Assets/Scenes/Level1Flipped.unity
-    guid: 8ede3821c0ce49e45805f44536d76067
-  - enabled: 1
     path: Assets/Scenes/Level2.unity
-    guid: 4f63b88422b8057479b40ea15b5c7825
-  - enabled: 1
-    path: Assets/Scenes/Level2Flipped.unity
-    guid: f7bbc830f8cacd74889a588cf0a9cd58
-  - enabled: 1
-    path: Assets/Scenes/Level2FlippedGlitched.unity
     guid: b256c3f75bf8daa4d8ce3441047ee318
   - enabled: 1
     path: Assets/Scenes/Level3.unity
     guid: 9b23a28f51c003f469c2c9bcfa8820e9
   - enabled: 1
-    path: Assets/Scenes/Level3Glitched.unity
-    guid: a88f041c0143253439de58a9c313c9b4
+    path: Assets/Scenes/Level4.unity
+    guid: 14ff5b834de34644c936793c810bc2d5
+  - enabled: 1
+    path: Assets/Scenes/Level5.unity
+    guid: 6b8d3acb47bd0bb44b2dc1553bb489e6
   m_configObjects: {}

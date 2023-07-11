@@ -6,6 +6,8 @@ TagManager:
   tags:
   - CollidablePlatform
   - PlayableCharacter
+  - Platform
+  - GPGroup
   layers:
   - Default
   - TransparentFX

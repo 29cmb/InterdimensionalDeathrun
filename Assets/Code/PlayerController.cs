@@ -1,166 +1,116 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using UnityEngine.UI;
-
-[RequireComponent(typeof(Rigidbody2D))]
-[RequireComponent(typeof(BoxCollider2D))]
 
 public class PlayerController : MonoBehaviour
 {
-    // Move player in 2D space
-    private int maxSpeed = 10;
-    private int jumpHeight = 10;
-    private int gravityScale = 1;
-    public Camera mainCamera;
+    // Public variables
+    private float jumpHeight = 4.0f;                // Height reached during a jump
+    private float jumpDuration = 0.15f;              // Duration of a complete jump cycle
+    private float acceleration = 6.5f;             // Acceleration while moving
+    private float deceleration = 2.0f;             // Deceleration when no input is given
+    private float cameraFollowSpeed = 5.0f;         // Speed at which the camera follows the player
+    private float maxVerticalOffset = 2.0f;         // Maximum vertical offset of the camera from the player
+    private float respawnHeight = -25.0f;           // Height at which the player will respawn
+    public Transform respawnPoint;                 // Respawn point for the player
 
-    bool facingRight = true;
-    float moveDirection = 0;
-    bool isGrounded = false;
-    Vector3 cameraPos;
-    Rigidbody2D r2d;
-    BoxCollider2D mainCollider;
-    Transform t;
-    public DynamicJoystick joystick;
-    public Button JumpBtn;
+    // Allow other scripts to manage the camera
+    public bool overrideCamera = false;
+    // Private variables
+    public Rigidbody2D rb;
+    private bool isJumping = false;
+    private float jumpStartTime = 0.0f;
+    private Camera mainCamera;
+    private Vector3 initialScale;
 
-    bool useJoystick = false;
-
-    // Use this for initialization
-    void Start()
+    // Start is called before the first frame update
+    private void Start()
     {
-        t = transform;
-        r2d = GetComponent<Rigidbody2D>();
-        mainCollider = GetComponent<BoxCollider2D>();
-        r2d.freezeRotation = true;
-        r2d.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-        r2d.gravityScale = gravityScale;
-        facingRight = t.localScale.x > 0;
-
-        if (mainCamera)
-        {
-            cameraPos = mainCamera.transform.position;
-        }
-        
+        rb = GetComponent<Rigidbody2D>();
+        mainCamera = Camera.main;
+        initialScale = transform.localScale;
     }
 
     // Update is called once per frame
-    void Update()
+    private void Update()
     {
-        if (SystemInfo.deviceType != DeviceType.Desktop)
+        // Check if the player is on the ground
+        bool isGrounded = IsGrounded();
+
+        // Update input and get movement direction
+        float inputDirection = Input.GetAxis("Horizontal");
+
+        // Apply acceleration or deceleration
+        if (inputDirection != 0)
         {
-            useJoystick = true;
-            joystick.enabled = true;
-            JumpBtn.enabled = true;
+            rb.AddForce(new Vector2(inputDirection * acceleration, 0));
         }
         else
         {
-            useJoystick = false;
-            Destroy(joystick);
-            Destroy(JumpBtn);
+            rb.AddForce(new Vector2(-rb.velocity.x * deceleration, 0));
         }
-        // Movement controls
-        if (useJoystick == false && (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) || (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)))
-        {
-            moveDirection = (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) ? -1 : 1;
-        }
-        else
-        {
-            moveDirection = 0;
-        }
-            if (useJoystick == true)
-            {
-                if (joystick.Horizontal != 0 && joystick.Vertical != 0)
-                {
-                    moveDirection = (joystick.Horizontal > 0) ? 1 : -1;
-                } else
-                {
-                    moveDirection = 0;
-                }
-            }
-  
 
-        // Change facing direction
-        if (moveDirection != 0)
+        // Jumping logic
+        if (Input.GetButtonDown("Jump") && isGrounded && !isJumping)
         {
-            if (moveDirection > 0 && !facingRight)
+            rb.velocity = new Vector2(rb.velocity.x, Mathf.Sqrt(2 * jumpHeight * Mathf.Abs(Physics2D.gravity.y)));
+            isJumping = true;
+            jumpStartTime = Time.time;
+        }
+
+        // Smooth jump animation
+        if (isJumping)
+        {
+            float jumpTime = Time.time - jumpStartTime;
+            if (jumpTime >= jumpDuration)
             {
-                facingRight = true;
-                t.localScale = new Vector3(Mathf.Abs(t.localScale.x), t.localScale.y, transform.localScale.z);
+                isJumping = false;
+                transform.localScale = initialScale;
             }
-            if (moveDirection < 0 && facingRight)
+            else
             {
-                facingRight = false;
-                t.localScale = new Vector3(-Mathf.Abs(t.localScale.x), t.localScale.y, t.localScale.z);
+                float scale = Mathf.Abs(jumpTime / jumpDuration);
+                float scaleX = Mathf.Lerp(initialScale.x, initialScale.x * 1.25f, scale);
+                float scaleY = Mathf.Lerp(initialScale.y, initialScale.y / 1.25f, scale);
+                transform.localScale = new Vector3(scaleX, scaleY, initialScale.z);
             }
         }
 
-        // Jumping
-        if (useJoystick == false && (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.Space)) && isGrounded)
+        // Camera following logic
+        Vector3 targetPosition = new Vector3(transform.position.x, transform.position.y, mainCamera.transform.position.z);
+        float verticalOffset = Mathf.Clamp(transform.position.y - mainCamera.transform.position.y, -maxVerticalOffset, maxVerticalOffset);
+        targetPosition += new Vector3(0f, verticalOffset, 0f);
+        if(overrideCamera == false)
         {
-            r2d.velocity = new Vector2(r2d.velocity.x, jumpHeight);
+            mainCamera.transform.position = Vector3.Lerp(mainCamera.transform.position, targetPosition, cameraFollowSpeed * Time.deltaTime);
         }
+        
 
-        // Camera follow
-        if (mainCamera)
+        // Check if the player has reached the respawn height
+        if (transform.position.y < respawnHeight)
         {
-            mainCamera.transform.position = new Vector3(t.position.x, t.position.y + 2, cameraPos.z);
+            Respawn();
         }
     }
 
-    public void MobileJump()
+    // Check if the player is on the ground
+    private bool IsGrounded()
     {
-        if (isGrounded)
+        GameObject[] platforms = GameObject.FindGameObjectsWithTag("Platform");
+        Debug.Log("Number of platforms: " + platforms.Length);
+
+        // Iterate over the platforms using a foreach loop
+        foreach (GameObject platform in platforms)
         {
-            r2d.velocity = new Vector2(r2d.velocity.x, jumpHeight);
+            if (rb.gameObject.GetComponent<BoxCollider2D>().IsTouching(platform.GetComponent<BoxCollider2D>())) {
+                return true;
+            }
         }
+        return false;
     }
 
-    async void FixedUpdate()
+    // Respawn the player at the respawn point
+    private void Respawn()
     {
-        Bounds colliderBounds = mainCollider.bounds;
-        float colliderRadius = mainCollider.size.x * 0.4f * Mathf.Abs(transform.localScale.x);
-        Vector3 groundCheckPos = colliderBounds.min + new Vector3(colliderBounds.size.x * 0.5f, colliderRadius * 0.9f, 0);
-        // Check if player is grounded
-        Collider2D[] colliders = Physics2D.OverlapCircleAll(groundCheckPos, colliderRadius);
-        //Check if any of the overlapping colliders are not player collider, if so, set isGrounded to true
-        isGrounded = false;
-        if (colliders.Length > 0)
-        {
-            for (int i = 0; i < colliders.Length; i++)
-            {
-                if (colliders[i] != mainCollider)
-                {
-                    isGrounded = true;
-                    break;
-                }
-            }
-        }
-
-        // Apply movement velocity
-        r2d.velocity = new Vector2((moveDirection) * maxSpeed, r2d.velocity.y);
-
-        // Simple debug
-        Debug.DrawLine(groundCheckPos, groundCheckPos - new Vector3(0, colliderRadius, 0), isGrounded ? Color.green : Color.red);
-        Debug.DrawLine(groundCheckPos, groundCheckPos - new Vector3(colliderRadius, 0, 0), isGrounded ? Color.green : Color.red);
-        var currentScene = SceneManager.GetActiveScene().name;
-        if (currentScene.Contains("Flipped"))
-        {
-            if (this.transform.position.y < -40)
-            {
-                await Task.Delay(100);
-                Debug.Log("Respawning Player.");
-                this.transform.position = GameObject.Find("RespawnPoint").transform.position;
-            }
-        } else
-        {
-            if (this.transform.position.y < -25)
-            {
-                await Task.Delay(100);
-                this.transform.position = GameObject.Find("RespawnPoint").transform.position;
-            }
-        }
+        transform.position = respawnPoint.position;
+        rb.velocity = Vector2.zero;
     }
 }

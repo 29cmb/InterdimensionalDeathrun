@@ -1,81 +1,96 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using System.Threading.Tasks;
+using DG.Tweening;
 
 public class RealityFlipper : MonoBehaviour
 {
-    // Start is called before the first frame update
-    string currentScene;
-    public BoxCollider2D playerCollision;
-    public BoxCollider2D boxCollision;
-    public GameObject player;
-    UnityEngine.Vector3 playerPos;
+    public float flipDuration = 2.0f; // Duration of the flip animation in seconds
+    public float flipDelay = 10.0f; // Delay after the flip before the RealityFlipper can be used again
+    
+    private Transform flipperPosition;
+    private bool canFlip = true; // Flag indicating whether the RealityFlipper can be used
+    private Renderer renderer; // Renderer component to change the mesh color
+    private Transform parentTransform; // Parent transform to flip the entire workspace
+    private Rigidbody2D playerRigidbody;
+    public PlayerController playerControl;
+    public Camera mainCamera;
+    public float zoomDistance = 60f;
 
-    void Start()
+    public Configuration config;
+    private GameObject player; // Reference to the player object
+    private void Start()
     {
+        
+        renderer = GetComponent<Renderer>();
+        parentTransform = transform.parent;
+        player = GameObject.Find("Player");
+        playerControl = player.GetComponent<PlayerController>();
+        playerRigidbody = player.GetComponent<Rigidbody2D>();
+        flipperPosition = this.transform;
+    }
+
+    private void Update()
+    {
+        player = config.player;
+        playerControl = player.GetComponent<PlayerController>();
+        playerRigidbody = player.GetComponent<Rigidbody2D>();
+        if (canFlip && IsPlayerTouching())
+        {
+            canFlip = false;
+            playerControl.overrideCamera = true; // Set overrideCamera to true
+            playerRigidbody.gameObject.SetActive(false);
+            // Zoom out the camera to show the whole map
+            mainCamera.DOOrthoSize(zoomDistance, flipDuration).OnComplete(() => {
+                Debug.Log(config.isFlipped);
+                FlipMap(); // Flip the map after the delay
+            });
+        }
+    }
+
+    private void FlipMap()
+    {
+        if (config.isFlipped == false)
+        {
+            Debug.Log("IsFlipped is called as false");
+            parentTransform.DORotate(new Vector3(0, 0, 180), flipDuration).SetEase(Ease.InOutSine).OnComplete(() =>
+            {
+                Debug.Log("DORotate called");
+                config.isFlipped = true;
+                player.transform.position = flipperPosition.position - new Vector3(0f, 2f, 0f); // Teleport the player
+                playerRigidbody.gameObject.SetActive(true); // Re-enable the player sprite
+                playerControl.overrideCamera = false; // Set overrideCamera to false
+                mainCamera.DOOrthoSize(8.01823f, flipDuration);
+                renderer.material.color = Color.gray; // Set the mesh color to gray
+                Invoke(nameof(EnableFlipper), flipDelay); // Enable the RealityFlipper after the delay
+            });
+        }
+        else if (config.isFlipped == true)
+        {
+            Debug.Log("IsFlipped is called as true");
+            parentTransform.DORotate(new Vector3(0, 0, 0), flipDuration).SetEase(Ease.InOutSine).OnComplete(() => {
+                config.isFlipped = false;
+
+                player.transform.position = flipperPosition.position - new Vector3(0f, 2f, 0f); // Teleport the player
+                playerRigidbody.gameObject.SetActive(true); // Re-enable the player sprite
+                playerControl.overrideCamera = false; // Set overrideCamera to false
+                mainCamera.DOOrthoSize(9f, flipDuration);
+                renderer.material.color = Color.gray; // Set the mesh color to gray
+                Invoke(nameof(EnableFlipper), flipDelay); // Enable the RealityFlipper after the delay
+            });
+        }
 
     }
 
-    // Update is called once per frame
-    async void Update()
+    private bool IsPlayerTouching()
     {
-        
-        currentScene = SceneManager.GetActiveScene().name; // Swiftly update the scene string
-        if(playerCollision.IsTouching(boxCollision)) // Check if the player is touching it
-        {
-            var a = this.GetComponent(typeof(AudioSource)) as AudioSource;
-            a.Play();
-            if (currentScene.Contains("Flipped")) // Check if the scene is currently flipped
-            {
-                if (currentScene.Contains("Glitched"))
-                {
-                    string str = currentScene.Substring(0, 6) + "Glitched"; // Make the new scene name
-                    string n = this.name;
-                    Debug.Log(n + " scene loaded.");
-                    SceneManager.LoadScene(str); // Load the new scene
-                    await Task.Delay(100);
-                    GameObject.Find("Player").transform.position = (GameObject.Find(n).transform.position - new Vector3(0, 3, 0));
-                    await Task.Delay(100);
-                    GameObject.Find("MainCamera").transform.position = (GameObject.Find("Player").transform.position);
-                } else
-                {
-                    string str = currentScene.Substring(0, 6); // Make the new scene name
-                    string n = this.name;
-                    Debug.Log(n + " scene loaded.");
-                    SceneManager.LoadScene(str); // Load the new scene
-                    await Task.Delay(100);
-                    GameObject.Find("Player").transform.position = (GameObject.Find(n).transform.position - new Vector3(0, 3, 0));
-                    await Task.Delay(100);
-                    GameObject.Find("MainCamera").transform.position = (GameObject.Find("Player").transform.position);
-                }
-                
-            } else {
-                if (currentScene.Contains("Glitched"))
-                { 
-                    string str = currentScene.Substring(0, 6) + "FlippedGlitched";
-                    string n = this.name;
-                    Debug.Log(n + " scene loaded.");
-                    SceneManager.LoadScene(str);
-                    await Task.Delay(100);
-                    GameObject.Find("Player").transform.position = (GameObject.Find(n).transform.position - new Vector3(0, 3, 0));
-                    await Task.Delay(100);
-                    GameObject.Find("MainCamera").transform.position = (GameObject.Find("Player").transform.position);
-                } else
-                {
-                    string str = currentScene + "Flipped";
-                    string n = this.name;
-                    Debug.Log(n + " scene loaded.");
-                    SceneManager.LoadScene(str);
-                    await Task.Delay(100);
-                    GameObject.Find("Player").transform.position = (GameObject.Find(n).transform.position - new Vector3(0, 3, 0));
-                    await Task.Delay(100);
-                    GameObject.Find("MainCamera").transform.position = (GameObject.Find("Player").transform.position);
+        BoxCollider2D playerCollider = player.GetComponent<BoxCollider2D>();
+        BoxCollider2D flipperCollider = GetComponent<BoxCollider2D>();
 
-                }
-                
-            }
-        }
+        return playerCollider.IsTouching(flipperCollider);
+    }
+
+    private void EnableFlipper()
+    {
+        canFlip = true;
+        renderer.material.color = Color.white; // Reset the mesh color
     }
 }
