@@ -5,12 +5,13 @@ public class PlayerController : MonoBehaviour
     // Public variables
     private float jumpHeight = 4.0f;                // Height reached during a jump
     private float jumpDuration = 0.15f;              // Duration of a complete jump cycle
-    private float acceleration = 6.5f;             // Acceleration while moving
+    private float acceleration = 3.5f;             // Acceleration while moving
     private float deceleration = 2.0f;             // Deceleration when no input is given
     private float cameraFollowSpeed = 5.0f;         // Speed at which the camera follows the player
     private float maxVerticalOffset = 2.0f;         // Maximum vertical offset of the camera from the player
     private float respawnHeight = -25.0f;           // Height at which the player will respawn
     public Transform respawnPoint;                 // Respawn point for the player
+    private float maxSpeed = 12.0f; // Maximum speed of the player
 
     // Allow other scripts to manage the camera
     public bool overrideCamera = false;
@@ -46,6 +47,11 @@ public class PlayerController : MonoBehaviour
         else
         {
             rb.AddForce(new Vector2(-rb.velocity.x * deceleration, 0));
+        }
+
+        if (Mathf.Abs(rb.velocity.x) > maxSpeed)
+        {
+            rb.velocity = new Vector2(Mathf.Sign(rb.velocity.x) * maxSpeed, rb.velocity.y);
         }
 
         // Jumping logic
